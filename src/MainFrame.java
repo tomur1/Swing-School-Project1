@@ -1,5 +1,6 @@
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -8,19 +9,19 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Scanner;
-import java.util.StringTokenizer;
-import java.util.Vector;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.*;
 
 public class MainFrame extends JFrame {
 
     private Vector<String> columnNames = new Vector<>();
     private Vector<Vector> data = new Vector<>();
     private JTable table;
-
+    private double scale;
     MainFrame() {
         super();
+        scale = 1.2;
 
         columnNames.add("Path");
         columnNames.add("Autor");
@@ -28,13 +29,14 @@ public class MainFrame extends JFrame {
         columnNames.add("Date");
         columnNames.add("Tags");
 
+
         GridBagLayout gridBagLayout = new GridBagLayout();
         setLayout(gridBagLayout);
 
         //Left Side
         JPanel panelLeft = new JPanel();
         //panelLeft.setBackground(Color.CYAN);
-        panelLeft.setPreferredSize(new Dimension(800, 500));
+        panelLeft.setPreferredSize(new Dimension((int) (800 * scale), (int) (500 * scale)));
         Dimension leftPanelDim = panelLeft.getPreferredSize();
         add(panelLeft);
 
@@ -45,11 +47,11 @@ public class MainFrame extends JFrame {
         JPanel centerView = new JPanel();
         JPanel bottomButtons = new JPanel();
 
-        topButtons.setBackground(Color.GREEN);
+        //topButtons.setBackground(Color.GREEN);
         topButtons.setPreferredSize(new Dimension(leftPanelDim.width, leftPanelDim.height / 13));
-        centerView.setBackground(Color.PINK);
+        //centerView.setBackground(Color.PINK);
         centerView.setPreferredSize(new Dimension(leftPanelDim.width, (leftPanelDim.height / 13) * 11));
-        bottomButtons.setBackground(Color.YELLOW);
+        //bottomButtons.setBackground(Color.YELLOW);
         bottomButtons.setPreferredSize(new Dimension(leftPanelDim.width, leftPanelDim.height / 13));
 
         GridBagConstraints constraints = new GridBagConstraints();
@@ -82,36 +84,38 @@ public class MainFrame extends JFrame {
         });
         saveBase.setText("Save Base");
 
-        JButton tags = new JButton();
-        tags.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                System.out.println("I have been clicked");
-            }
-        });
-        tags.setText("Tags");
-
         JButton filter = new JButton();
         filter.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("my size: " + filter.getHeight());
+                filter();
 
             }
         });
         filter.setText("Filter");
 
+        JButton resetFilter = new JButton();
+        resetFilter.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                resetFilter();
+            }
+        });
+        resetFilter.setText("Reset Filter");
+
         topButtons.add(loadBase);
         topButtons.add(saveBase);
-        topButtons.add(tags);
         topButtons.add(filter);
+        topButtons.add(resetFilter);
 
         //MyTableModel tableModel = new MyTableModel(data,columnNames);
 
         table = new JTable(data, columnNames);
         table.setFillsViewportHeight(true);
+        table.setAutoCreateRowSorter(true);
         JScrollPane scrollPane = new JScrollPane(table);
         table.setPreferredScrollableViewportSize(centerView.getPreferredSize());
+
         centerView.setPreferredSize(centerView.getPreferredSize());
         centerView.add(scrollPane);
 
@@ -131,8 +135,7 @@ public class MainFrame extends JFrame {
         addPic.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                addPicture(false, -1);
-                System.out.println("I have been clicked");
+                addPicture(WindowMode.ADD, -1);
             }
         });
         addPic.setText("Add");
@@ -164,28 +167,407 @@ public class MainFrame extends JFrame {
 
         //Right Side
         JPanel panelRight = new JPanel();
-        panelRight.setBackground(Color.RED);
-        panelRight.setPreferredSize(new Dimension(100, 500));
+        //panelRight.setBackground(Color.RED);
+        panelRight.setPreferredSize(new Dimension((int) (100 * scale), (int) (500 * scale)));
         add(panelRight);
+
+        GridBagLayout gridBagLayoutRight = new GridBagLayout();
+        panelRight.setLayout(gridBagLayoutRight);
+
+        Dimension rightPanelButtonsSize = new Dimension(100, 23);
+
+
+        JButton minAutor = new JButton("Min Autor");
+        minAutor.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                find(SearchEnum.MIN, SearchEnum.AUTOR);
+            }
+        });
+        minAutor.setPreferredSize(rightPanelButtonsSize);
+
+        JButton minLocation = new JButton("Min Location");
+        minLocation.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                find(SearchEnum.MIN, SearchEnum.LOCATION);
+            }
+        });
+        minLocation.setPreferredSize(rightPanelButtonsSize);
+
+        JButton minDate = new JButton("Min Date");
+        minDate.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                find(SearchEnum.MIN, SearchEnum.DATE);
+            }
+        });
+        minDate.setPreferredSize(rightPanelButtonsSize);
+
+        JButton maxAutor = new JButton("Max Autor");
+        maxAutor.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                find(SearchEnum.MAX, SearchEnum.AUTOR);
+            }
+        });
+        maxAutor.setPreferredSize(rightPanelButtonsSize);
+
+        JButton maxLocation = new JButton("Max Location");
+        maxLocation.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                find(SearchEnum.MAX, SearchEnum.LOCATION);
+            }
+        });
+        maxLocation.setPreferredSize(rightPanelButtonsSize);
+
+        JButton maxDate = new JButton("Max Date");
+        maxDate.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                find(SearchEnum.MAX, SearchEnum.DATE);
+            }
+        });
+        maxDate.setPreferredSize(rightPanelButtonsSize);
+
+        JButton dateSearch = new JButton("Date Search");
+        dateSearch.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dateSearch();
+            }
+        });
+        dateSearch.setPreferredSize(rightPanelButtonsSize);
+
+        GridBagConstraints constraintsRight = new GridBagConstraints();
+
+        constraintsRight.insets = new Insets(4, 0, 4, 0);
+        constraintsRight.gridx = 0;
+        constraintsRight.gridy = 0;
+        panelRight.add(minAutor, constraintsRight);
+        constraintsRight.gridx = 0;
+        constraintsRight.gridy = 1;
+        panelRight.add(minLocation, constraintsRight);
+        constraintsRight.gridx = 0;
+        constraintsRight.gridy = 2;
+        panelRight.add(minDate, constraintsRight);
+        constraintsRight.gridx = 0;
+        constraintsRight.gridy = 3;
+        panelRight.add(maxAutor, constraintsRight);
+        constraintsRight.gridx = 0;
+        constraintsRight.gridy = 4;
+        panelRight.add(maxLocation, constraintsRight);
+        constraintsRight.gridx = 0;
+        constraintsRight.gridy = 5;
+        panelRight.add(maxDate, constraintsRight);
+        constraintsRight.gridx = 0;
+        constraintsRight.gridy = 6;
+        panelRight.add(dateSearch, constraintsRight);
 
 
         pack();
+        setMinimumSize(getSize());
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setVisible(true);
     }
 
+    private void resetFilter() {
+        TableRowSorter sorter = (TableRowSorter) table.getRowSorter();
+        RowFilter<Object, Object> fooBarFilter = RowFilter.regexFilter("");
+        sorter.setRowFilter(fooBarFilter);
+    }
+
+    private void dateSearch() {
+        JFrame dateSearchWindow = new JFrame("Date Search");
+        GridBagLayout gridBagLayout = new GridBagLayout();
+        dateSearchWindow.setLayout(gridBagLayout);
+
+        JRadioButton less = new JRadioButton("Less than");
+        JRadioButton more = new JRadioButton("More than");
+
+
+        ButtonGroup buttonGroup = new ButtonGroup();
+        buttonGroup.add(less);
+        buttonGroup.add(more);
+
+        JLabel dateLabel = new JLabel("date:");
+        JTextField dateField = new JTextField("yyyy-MM-dd");
+        dateField.setPreferredSize(new Dimension(100, 20));
+
+        JButton accept = new JButton("Accept");
+        accept.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (buttonGroup.getSelection() != null) {
+                    if (less.isSelected()) {
+                        findDates(SearchEnum.LESS, dateField.getText());
+                    } else {
+                        findDates(SearchEnum.MORE, dateField.getText());
+                    }
+
+                } else {
+                    System.out.println("Select an less or more than");
+                }
+
+            }
+        });
+
+
+        JButton cancel = new JButton("Cancel");
+        cancel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dateSearchWindow.dispose();
+            }
+        });
+
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.insets = new Insets(18, 18, 2, 2);
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        dateSearchWindow.add(less, constraints);
+        constraints.insets = new Insets(18, 2, 2, 18);
+        constraints.gridx = 1;
+        constraints.gridy = 0;
+        dateSearchWindow.add(more, constraints);
+        constraints.insets = new Insets(2, 18, 18, 2);
+        constraints.gridx = 0;
+        constraints.gridy = 1;
+        dateSearchWindow.add(dateLabel, constraints);
+        constraints.insets = new Insets(2, 2, 18, 18);
+        constraints.gridx = 1;
+        constraints.gridy = 1;
+        dateSearchWindow.add(dateField, constraints);
+        constraints.insets = new Insets(8, 8, 8, 8);
+        constraints.gridx = 0;
+        constraints.gridy = 2;
+        dateSearchWindow.add(accept, constraints);
+        constraints.insets = new Insets(8, 8, 8, 8);
+        constraints.gridx = 1;
+        constraints.gridy = 2;
+        dateSearchWindow.add(cancel, constraints);
+
+
+        dateSearchWindow.pack();
+        dateSearchWindow.setVisible(true);
+    }
+
+    private Date dateFromString(String date) throws ParseException {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date dateTime = null;
+        sdf.setLenient(false);
+        dateTime = sdf.parse(date);
+
+
+        return dateTime;
+    }
+
+    private void findDates(SearchEnum mode, String date) {
+
+        Date dateTime = null;
+        try {
+            dateTime = dateFromString(date);
+        } catch (ParseException e) {
+            System.out.println("Wrong time format or invalid date, please use yyyy-MM-dd");
+            return;
+        }
+
+        ArrayList<Date> dates = new ArrayList<>();
+        for (Vector<String> row :
+                data) {
+            try {
+                dates.add(dateFromString(row.get(3)));
+            } catch (ParseException e) {
+                System.out.println("Wrong time format or invalid date, please use yyyy-MM-dd");
+                return;
+            }
+        }
+
+
+        ArrayList<String> correct = getCorrectStringDates(dates, mode, dateTime);
+
+
+        for (String thisDate :
+                correct) {
+            System.out.println(thisDate);
+        }
+        applyDateFilters(correct);
+
+    }
+
+    private void applyDateFilters(ArrayList<String> correct) {
+        TableRowSorter sorter = (TableRowSorter) table.getRowSorter();
+        ArrayList<RowFilter<Object, Object>> filters = new ArrayList<RowFilter<Object, Object>>(5);
+        for (String filter :
+                correct) {
+            filters.add(RowFilter.regexFilter(filter));
+        }
+        //filters.add(RowFilter.regexFilter(row.get(0)));
+        RowFilter<Object, Object> fooBarFilter = RowFilter.orFilter(filters);
+        sorter.setRowFilter(fooBarFilter);
+    }
+
+    private ArrayList<String> getCorrectStringDates(ArrayList<Date> dates, SearchEnum mode, Date dateTime) {
+        ArrayList<String> correct = new ArrayList<>();
+        for (Date iDate :
+                dates) {
+            if (mode == SearchEnum.LESS) {
+                if (iDate.before(dateTime)) {
+                    correctDate(correct, iDate);
+                }
+            } else {
+                if (iDate.after(dateTime)) {
+                    correctDate(correct, iDate);
+                }
+            }
+
+        }
+        return correct;
+    }
+
+    private void correctDate(ArrayList<String> correct, Date iDate) {
+        LocalDate localDate = iDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        int month = localDate.getMonthValue();
+        int day = localDate.getDayOfMonth();
+        String monthString;
+        String dayString;
+        if (month < 10) {
+            monthString = '0' + Integer.toString(month);
+        } else {
+            monthString = String.valueOf(month);
+        }
+        if (day < 10) {
+            dayString = '0' + Integer.toString(day);
+        } else {
+            dayString = String.valueOf(day);
+        }
+        correct.add(localDate.getYear() + "-" + monthString + "-" + dayString);
+    }
+
+    private void find(SearchEnum mode, SearchEnum what) {
+        //Find all important data
+        String minAutor = null;
+        String minLocation = null;
+        String minDate = null;
+        String maxAutor = null;
+        String maxLocation = null;
+        String maxDate = null;
+        int counter = 0;
+        for (Vector<String> row :
+                data) {
+            for (String cell :
+                    row) {
+                switch (counter % 5) {
+                    case 0:
+                        //we don't care about path so ignore
+                        break;
+                    case 1:
+                        //autor
+                        if (minAutor == null) {
+                            minAutor = cell;
+                        }
+                        if (maxAutor == null) {
+                            maxAutor = cell;
+                        }
+                        if (cell.compareTo(minAutor) < 0) {
+                            minAutor = cell;
+                        }
+                        if (cell.compareTo(maxAutor) > 0) {
+                            maxAutor = cell;
+                        }
+                        break;
+                    case 2:
+                        //location
+                        if (minLocation == null) {
+                            minLocation = cell;
+                        }
+                        if (maxLocation == null) {
+                            maxLocation = cell;
+                        }
+                        if (cell.compareTo(minLocation) < 0) {
+                            minLocation = cell;
+                        }
+                        if (cell.compareTo(maxLocation) > 0) {
+                            maxLocation = cell;
+                        }
+                        break;
+                    case 3:
+                        //date
+                        if (minDate == null) {
+                            minDate = cell;
+                        }
+                        if (maxDate == null) {
+                            maxDate = cell;
+                        }
+                        //MAKE DIFFERENT COMPARISONS FOR DATE!!!!
+                        if (cell.compareTo(minDate) < 0) {
+                            minDate = cell;
+                        }
+                        if (cell.compareTo(maxDate) > 0) {
+                            maxDate = cell;
+                        }
+                        break;
+                    case 4:
+                        //tags so ignore
+                        break;
+
+                }
+
+                counter++;
+            }
+        }
+        String filter = "";
+        if (mode == SearchEnum.MAX) {
+            if (what == SearchEnum.AUTOR) {
+                filter = maxAutor;
+            } else if (what == SearchEnum.LOCATION) {
+                filter = maxLocation;
+            } else {
+                filter = maxDate;
+            }
+        } else {
+            //MIN section
+            if (what == SearchEnum.AUTOR) {
+                filter = minAutor;
+            } else if (what == SearchEnum.LOCATION) {
+                filter = minLocation;
+            } else {
+                filter = minDate;
+            }
+        }
+        TableRowSorter sorter = (TableRowSorter) table.getRowSorter();
+        filter = filter.concat("$");
+
+        RowFilter<Object, Object> fooBarFilter = RowFilter.regexFilter(filter);
+        sorter.setRowFilter(fooBarFilter);
+
+    }
+
+    private void filter() {
+        JFrame filterWindow = new JFrame("Filter");
+        GridBagLayout gridBagLayout = new GridBagLayout();
+
+        filterWindow.setLayout(gridBagLayout);
+
+        addPicture(WindowMode.FILTER, -1);
+
+    }
+
+
+
     private void editPicture() {
-        int idx = table.getSelectedRow();
+        int idx = table.convertRowIndexToModel(table.getSelectedRow());
         if (idx == -1) {
             System.out.println("Please select a picture");
             return;
         }
 
-        addPicture(true, idx);
+        addPicture(WindowMode.EDIT, idx);
     }
 
     private void removePicture() {
-        int idx = table.getSelectedRow();
+        int idx = table.convertRowIndexToModel(table.getSelectedRow());
         if (idx == -1) {
             System.out.println("Please select a picture");
             return;
@@ -196,7 +578,7 @@ public class MainFrame extends JFrame {
     }
 
     private void viewPicture() {
-        int idx = table.getSelectedRow();
+        int idx = table.convertRowIndexToModel(table.getSelectedRow());
         if (idx == -1) {
             System.out.println("Please select a picture");
             return;
@@ -237,6 +619,7 @@ public class MainFrame extends JFrame {
 
         try {
             FileWriter fw = new FileWriter(path);
+            fw.append("Verification Line");
             for (Vector<String> row :
                     data) {
                 for (String cell :
@@ -269,6 +652,10 @@ public class MainFrame extends JFrame {
         String text;
         try {
             Scanner scanner = new Scanner(base);
+            if (scanner.nextLine().compareTo("Verification Line") != 0) {
+                System.out.println("Invalid base file");
+                return;
+            }
             while (scanner.hasNext()) {
                 sb.append(scanner.nextLine());
                 sb.append("\n");
@@ -321,18 +708,22 @@ public class MainFrame extends JFrame {
         } else {
             throw new Exception();
         }
-
-
     }
 
 
 
     //opens a windows to add a picture
-    private void addPicture(boolean editMode, int tableIdx) {
-        JFrame addWindow = new JFrame("Add Picture");
+    private void addPicture(WindowMode mode, int tableIdx) {
+        JFrame window = new JFrame("Add Picture");
         GridBagLayout gridBagLayout = new GridBagLayout();
 
-        addWindow.setLayout(gridBagLayout);
+        window.setLayout(gridBagLayout);
+
+        if (mode == WindowMode.EDIT) {
+            window.setTitle("Edit Picture");
+        } else if (mode == WindowMode.FILTER) {
+            window.setTitle("Filter");
+        }
 
 
         //Initialize fields nad labels
@@ -351,7 +742,7 @@ public class MainFrame extends JFrame {
         JLabel tagsLabel = new JLabel("Tags: ");
         JTextField tagsField = new JTextField();
 
-        if (editMode) {
+        if (mode == WindowMode.EDIT) {
             pathField.setText((String) data.get(tableIdx).get(0));
             autorField.setText((String) data.get(tableIdx).get(1));
             locationField.setText((String) data.get(tableIdx).get(2));
@@ -367,65 +758,66 @@ public class MainFrame extends JFrame {
         constraints.gridx = 0;
         constraints.gridy = 0;
         constraints.insets = new Insets(8, 8, 2, 8);
-        addWindow.add(pathLabel, constraints);
+        window.add(pathLabel, constraints);
         constraints.gridx = 1;
         constraints.gridy = 0;
-        addWindow.add(pathField, constraints);
+        window.add(pathField, constraints);
         constraints.insets = new Insets(2, 8, 2, 8);
 
         autorField.setPreferredSize(textSize);
         constraints.gridx = 0;
         constraints.gridy = 1;
-        addWindow.add(autorLabel, constraints);
+        window.add(autorLabel, constraints);
         constraints.gridx = 1;
         constraints.gridy = 1;
-        addWindow.add(autorField, constraints);
+        window.add(autorField, constraints);
 
         locationField.setPreferredSize(textSize);
         constraints.gridx = 0;
         constraints.gridy = 2;
-        addWindow.add(locationLabel, constraints);
+        window.add(locationLabel, constraints);
         constraints.gridx = 1;
         constraints.gridy = 2;
-        addWindow.add(locationField, constraints);
+        window.add(locationField, constraints);
 
         dateField.setPreferredSize(textSize);
         constraints.gridx = 0;
         constraints.gridy = 3;
-        addWindow.add(dateLabel, constraints);
+        window.add(dateLabel, constraints);
         constraints.gridx = 1;
         constraints.gridy = 3;
-        addWindow.add(dateField, constraints);
+        window.add(dateField, constraints);
 
         constraints.insets = new Insets(2, 8, 8, 8);
 
         tagsField.setPreferredSize(textSize);
         constraints.gridx = 0;
         constraints.gridy = 4;
-        addWindow.add(tagsLabel, constraints);
+        window.add(tagsLabel, constraints);
         constraints.gridx = 1;
         constraints.gridy = 4;
-        addWindow.add(tagsField, constraints);
+        window.add(tagsField, constraints);
 
-        JButton explorer = new JButton("...");
-        explorer.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String path = null;
-                try {
-                    path = getPath();
-                } catch (Exception e1) {
-                    return;
+        if (mode == WindowMode.ADD) {
+            JButton explorer = new JButton("...");
+            explorer.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    String path = null;
+                    try {
+                        path = getPath();
+                    } catch (Exception e1) {
+                        return;
+                    }
+                    pathField.setText(path);
                 }
-                pathField.setText(path);
-            }
-        });
+            });
 
-        constraints.insets = new Insets(8, 8, 2, 8);
-        constraints.gridx = 2;
-        constraints.gridy = 0;
-        addWindow.add(explorer, constraints);
-
+            constraints.insets = new Insets(8, 8, 2, 8);
+            constraints.gridx = 2;
+            constraints.gridy = 0;
+            window.add(explorer, constraints);
+        }
 
         //Initialize button
         JButton accept = new JButton("Accept");
@@ -438,16 +830,18 @@ public class MainFrame extends JFrame {
                 String date = dateField.getText();
                 String tags = tagsField.getText();
 
-                if ((path.endsWith("jpg") || path.endsWith("png")) && new File(path).exists()) {
-                    if (!date.isEmpty()) {
-                        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy");
+
+                if ((path.endsWith("jpg") || path.endsWith("png")) && new File(path).exists() || mode == WindowMode.FILTER) {
+                    if (date.isEmpty() || mode == WindowMode.FILTER) {
+
+                    } else {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                         Date dateTime = null;
                         sdf.setLenient(false);
                         try {
                             dateTime = sdf.parse(date);
-                            System.out.println(dateTime.toString());
                         } catch (ParseException e1) {
-                            System.out.println("Wrong time format or invalid date, please use dd.mm.yyyy");
+                            System.out.println("Wrong time format or invalid date, please use yyyy-MM-dd");
                             return;
                         }
                     }
@@ -459,7 +853,7 @@ public class MainFrame extends JFrame {
                     newRow.add(location);
                     newRow.add(date);
                     newRow.add(tags);
-                    if (editMode) {
+                    if (mode == WindowMode.EDIT) {
                         data.get(tableIdx).clear();
                         data.get(tableIdx).add(newRow.get(0));
                         data.get(tableIdx).add(newRow.get(1));
@@ -467,11 +861,13 @@ public class MainFrame extends JFrame {
                         data.get(tableIdx).add(newRow.get(3));
                         data.get(tableIdx).add(newRow.get(4));
                         updateTable();
+                    } else if (mode == WindowMode.FILTER) {
+                        applyFilters(newRow);
                     } else {
                         addRow(newRow);
                     }
 
-                    addWindow.dispose();
+                    window.dispose();
                 } else {
                     System.out.println("Wrong file type or doesn't exist");
                     return;
@@ -485,20 +881,33 @@ public class MainFrame extends JFrame {
         cancel.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                addWindow.dispose();
+                window.dispose();
             }
         });
         constraints.gridx = 0;
         constraints.gridy = 5;
-        addWindow.add(accept, constraints);
+        window.add(accept, constraints);
         constraints.gridx = 1;
         constraints.gridy = 5;
         constraints.anchor = GridBagConstraints.WEST;
-        addWindow.add(cancel, constraints);
+        window.add(cancel, constraints);
 
 
-        addWindow.pack();
-        addWindow.setVisible(true);
+        window.pack();
+        window.setVisible(true);
+
+    }
+
+    private void applyFilters(Vector<String> row) {
+        TableRowSorter sorter = (TableRowSorter) table.getRowSorter();
+        ArrayList<RowFilter<Object, Object>> filters = new ArrayList<RowFilter<Object, Object>>(5);
+        filters.add(RowFilter.regexFilter(row.get(0)));
+        filters.add(RowFilter.regexFilter(row.get(1)));
+        filters.add(RowFilter.regexFilter(row.get(2)));
+        filters.add(RowFilter.regexFilter(row.get(3)));
+        filters.add(RowFilter.regexFilter(row.get(4)));
+        RowFilter<Object, Object> fooBarFilter = RowFilter.andFilter(filters);
+        sorter.setRowFilter(fooBarFilter);
 
     }
 
