@@ -19,6 +19,7 @@ public class MainFrame extends JFrame {
     private Vector<Vector> data = new Vector<>();
     private JTable table;
     private double scale;
+    private JFrame frame = new JFrame();
     MainFrame() {
         super();
         scale = 1.2;
@@ -307,7 +308,7 @@ public class MainFrame extends JFrame {
                     }
 
                 } else {
-                    System.out.println("Select an less or more than");
+                    JOptionPane.showMessageDialog(frame, "Select an less or more than");
                 }
 
             }
@@ -369,7 +370,7 @@ public class MainFrame extends JFrame {
         try {
             dateTime = dateFromString(date);
         } catch (ParseException e) {
-            System.out.println("Wrong time format or invalid date, please use yyyy-MM-dd");
+            JOptionPane.showMessageDialog(frame, "Wrong time format or invalid date, please use yyyy-MM-dd");
             return;
         }
 
@@ -379,19 +380,14 @@ public class MainFrame extends JFrame {
             try {
                 dates.add(dateFromString(row.get(3)));
             } catch (ParseException e) {
-                System.out.println("Wrong time format or invalid date, please use yyyy-MM-dd");
+
+                JOptionPane.showMessageDialog(frame, "Wrong time format or invalid date, please use yyyy-MM-dd");
                 return;
             }
         }
 
-
         ArrayList<String> correct = getCorrectStringDates(dates, mode, dateTime);
 
-
-        for (String thisDate :
-                correct) {
-            System.out.println(thisDate);
-        }
         applyDateFilters(correct);
 
     }
@@ -446,6 +442,10 @@ public class MainFrame extends JFrame {
     }
 
     private void find(SearchEnum mode, SearchEnum what) {
+        if (data.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "No pictures to find");
+            return;
+        }
         //Find all important data
         String minAutor = null;
         String minLocation = null;
@@ -557,35 +557,36 @@ public class MainFrame extends JFrame {
 
 
     private void editPicture() {
-        int idx = table.convertRowIndexToModel(table.getSelectedRow());
+        int idx = table.getSelectedRow();
         if (idx == -1) {
-            System.out.println("Please select a picture");
+            JOptionPane.showMessageDialog(frame, "Please select a picture");
             return;
         }
+        idx = table.convertRowIndexToModel(table.getSelectedRow());
 
         addPicture(WindowMode.EDIT, idx);
     }
 
     private void removePicture() {
-        int idx = table.convertRowIndexToModel(table.getSelectedRow());
+
+        int idx = table.getSelectedRow();
         if (idx == -1) {
-            System.out.println("Please select a picture");
+            JOptionPane.showMessageDialog(frame, "Please select a picture");
             return;
         }
-
+        idx = table.convertRowIndexToModel(table.getSelectedRow());
         data.remove(idx);
         updateTable();
     }
 
     private void viewPicture() {
-        int idx = table.convertRowIndexToModel(table.getSelectedRow());
+        int idx = table.getSelectedRow();
         if (idx == -1) {
-            System.out.println("Please select a picture");
+            JOptionPane.showMessageDialog(frame, "Please select a picture");
             return;
         }
-
+        idx = table.convertRowIndexToModel(table.getSelectedRow());
         String path = (String) data.get(idx).get(0);
-        System.out.println(path);
 
         //create view frame
         JFrame viewFrame = new JFrame();
@@ -606,7 +607,6 @@ public class MainFrame extends JFrame {
         if (selection == JFileChooser.APPROVE_OPTION) {
             path = fileChooser.getSelectedFile().getAbsolutePath();
         } else {
-            System.out.println("Save canceled");
             return;
         }
 
@@ -619,7 +619,7 @@ public class MainFrame extends JFrame {
 
         try {
             FileWriter fw = new FileWriter(path);
-            fw.append("Verification Line");
+            fw.append("Verification Line\n");
             for (Vector<String> row :
                     data) {
                 for (String cell :
@@ -631,7 +631,8 @@ public class MainFrame extends JFrame {
             }
             fw.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(frame, "Unable to save");
+            return;
         }
 
 
@@ -642,7 +643,6 @@ public class MainFrame extends JFrame {
         try {
             path = getPath();
         } catch (Exception e) {
-            System.out.println("Operation Canceled");
             return;
         }
         File base = new File(path);
@@ -653,7 +653,7 @@ public class MainFrame extends JFrame {
         try {
             Scanner scanner = new Scanner(base);
             if (scanner.nextLine().compareTo("Verification Line") != 0) {
-                System.out.println("Invalid base file");
+                JOptionPane.showMessageDialog(frame, "Invalid base file");
                 return;
             }
             while (scanner.hasNext()) {
@@ -841,7 +841,7 @@ public class MainFrame extends JFrame {
                         try {
                             dateTime = sdf.parse(date);
                         } catch (ParseException e1) {
-                            System.out.println("Wrong time format or invalid date, please use yyyy-MM-dd");
+                            JOptionPane.showMessageDialog(frame, "Wrong time format or invalid date, please use yyyy-MM-dd");
                             return;
                         }
                     }
@@ -869,7 +869,7 @@ public class MainFrame extends JFrame {
 
                     window.dispose();
                 } else {
-                    System.out.println("Wrong file type or doesn't exist");
+                    JOptionPane.showMessageDialog(frame, "Wrong file type or doesn't exist");
                     return;
                 }
 
