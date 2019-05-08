@@ -20,6 +20,11 @@ public class MainFrame extends JFrame {
     private JTable table;
     private double scale;
     private JFrame frame = new JFrame();
+    private static final int PATH = 0;
+    private static final int AUTOR = 1;
+    private static final int LOCATION = 2;
+    private static final int DATE = 3;
+    private static final int TAGS = 4;
     MainFrame() {
         super();
         scale = 1.2;
@@ -108,8 +113,6 @@ public class MainFrame extends JFrame {
         topButtons.add(saveBase);
         topButtons.add(filter);
         topButtons.add(resetFilter);
-
-        //MyTableModel tableModel = new MyTableModel(data,columnNames);
 
         table = new JTable(data, columnNames);
         table.setFillsViewportHeight(true);
@@ -378,7 +381,7 @@ public class MainFrame extends JFrame {
         for (Vector<String> row :
                 data) {
             try {
-                dates.add(dateFromString(row.get(3)));
+                dates.add(dateFromString(row.get(DATE)));
             } catch (ParseException e) {
 
                 JOptionPane.showMessageDialog(frame, "Wrong time format or invalid date, please use yyyy-MM-dd");
@@ -399,7 +402,6 @@ public class MainFrame extends JFrame {
                 correct) {
             filters.add(RowFilter.regexFilter(filter));
         }
-        //filters.add(RowFilter.regexFilter(row.get(0)));
         RowFilter<Object, Object> fooBarFilter = RowFilter.orFilter(filters);
         sorter.setRowFilter(fooBarFilter);
     }
@@ -453,68 +455,59 @@ public class MainFrame extends JFrame {
         String maxAutor = null;
         String maxLocation = null;
         String maxDate = null;
-        int counter = 0;
         for (Vector<String> row :
                 data) {
-            for (String cell :
-                    row) {
-                switch (counter % 5) {
-                    case 0:
-                        //we don't care about path so ignore
-                        break;
+            for (int i = 1; i < 5; i++) {
+                if (row.get(i).isEmpty()) {
+                    continue;
+                }
+                switch (i) {
                     case 1:
                         //autor
                         if (minAutor == null) {
-                            minAutor = cell;
+                            minAutor = row.get(i);
                         }
                         if (maxAutor == null) {
-                            maxAutor = cell;
+                            maxAutor = row.get(i);
                         }
-                        if (cell.compareTo(minAutor) < 0) {
-                            minAutor = cell;
+                        if (row.get(i).compareTo(minAutor) < 0) {
+                            minAutor = row.get(i);
                         }
-                        if (cell.compareTo(maxAutor) > 0) {
-                            maxAutor = cell;
+                        if (row.get(i).compareTo(maxAutor) > 0) {
+                            maxAutor = row.get(i);
                         }
                         break;
                     case 2:
                         //location
                         if (minLocation == null) {
-                            minLocation = cell;
+                            minLocation = row.get(i);
                         }
                         if (maxLocation == null) {
-                            maxLocation = cell;
+                            maxLocation = row.get(i);
                         }
-                        if (cell.compareTo(minLocation) < 0) {
-                            minLocation = cell;
+                        if (row.get(i).compareTo(minLocation) < 0) {
+                            minLocation = row.get(i);
                         }
-                        if (cell.compareTo(maxLocation) > 0) {
-                            maxLocation = cell;
+                        if (row.get(i).compareTo(maxLocation) > 0) {
+                            maxLocation = row.get(i);
                         }
                         break;
                     case 3:
                         //date
                         if (minDate == null) {
-                            minDate = cell;
+                            minDate = row.get(i);
                         }
                         if (maxDate == null) {
-                            maxDate = cell;
+                            maxDate = row.get(i);
                         }
-                        //MAKE DIFFERENT COMPARISONS FOR DATE!!!!
-                        if (cell.compareTo(minDate) < 0) {
-                            minDate = cell;
+                        if (row.get(i).compareTo(minDate) < 0) {
+                            minDate = row.get(i);
                         }
-                        if (cell.compareTo(maxDate) > 0) {
-                            maxDate = cell;
+                        if (row.get(i).compareTo(maxDate) > 0) {
+                            maxDate = row.get(i);
                         }
                         break;
-                    case 4:
-                        //tags so ignore
-                        break;
-
                 }
-
-                counter++;
             }
         }
         String filter = "";
@@ -586,7 +579,7 @@ public class MainFrame extends JFrame {
             return;
         }
         idx = table.convertRowIndexToModel(table.getSelectedRow());
-        String path = (String) data.get(idx).get(0);
+        String path = (String) data.get(idx).get(PATH);
 
         //create view frame
         JFrame viewFrame = new JFrame();
@@ -624,6 +617,9 @@ public class MainFrame extends JFrame {
                     data) {
                 for (String cell :
                         row) {
+                    if (cell.isEmpty()) {
+                        fw.append('@');
+                    }
                     fw.append(cell);
                     fw.append(';');
                 }
@@ -671,20 +667,25 @@ public class MainFrame extends JFrame {
 
     private Vector<Vector> convertToRows(String allData) {
         data.clear();
-        StringTokenizer st = new StringTokenizer(allData);
+        StringTokenizer st = new StringTokenizer(allData, ";\n");
 
         Vector<String> row = new Vector<>();
 
         int i = 0;
         while (st.hasMoreTokens()) {
             i++;
-            row.add(st.nextToken(";\n"));
+            String val = st.nextToken();
+            if (val.equals("@")) {
+                row.add("");
+            } else {
+                row.add(val);
+            }
+
             if (i % 5 == 0) {
                 data.add(row);
                 row = new Vector<>();
             }
         }
-
 
         return data;
     }
@@ -743,11 +744,11 @@ public class MainFrame extends JFrame {
         JTextField tagsField = new JTextField();
 
         if (mode == WindowMode.EDIT) {
-            pathField.setText((String) data.get(tableIdx).get(0));
-            autorField.setText((String) data.get(tableIdx).get(1));
-            locationField.setText((String) data.get(tableIdx).get(2));
-            dateField.setText((String) data.get(tableIdx).get(3));
-            tagsField.setText((String) data.get(tableIdx).get(4));
+            pathField.setText((String) data.get(tableIdx).get(PATH));
+            autorField.setText((String) data.get(tableIdx).get(AUTOR));
+            locationField.setText((String) data.get(tableIdx).get(LOCATION));
+            dateField.setText((String) data.get(tableIdx).get(DATE));
+            tagsField.setText((String) data.get(tableIdx).get(TAGS));
 
         }
 
@@ -855,11 +856,11 @@ public class MainFrame extends JFrame {
                     newRow.add(tags);
                     if (mode == WindowMode.EDIT) {
                         data.get(tableIdx).clear();
-                        data.get(tableIdx).add(newRow.get(0));
-                        data.get(tableIdx).add(newRow.get(1));
-                        data.get(tableIdx).add(newRow.get(2));
-                        data.get(tableIdx).add(newRow.get(3));
-                        data.get(tableIdx).add(newRow.get(4));
+                        data.get(tableIdx).add(newRow.get(PATH));
+                        data.get(tableIdx).add(newRow.get(AUTOR));
+                        data.get(tableIdx).add(newRow.get(LOCATION));
+                        data.get(tableIdx).add(newRow.get(DATE));
+                        data.get(tableIdx).add(newRow.get(TAGS));
                         updateTable();
                     } else if (mode == WindowMode.FILTER) {
                         applyFilters(newRow);
@@ -901,11 +902,11 @@ public class MainFrame extends JFrame {
     private void applyFilters(Vector<String> row) {
         TableRowSorter sorter = (TableRowSorter) table.getRowSorter();
         ArrayList<RowFilter<Object, Object>> filters = new ArrayList<RowFilter<Object, Object>>(5);
-        filters.add(RowFilter.regexFilter(row.get(0)));
-        filters.add(RowFilter.regexFilter(row.get(1)));
-        filters.add(RowFilter.regexFilter(row.get(2)));
-        filters.add(RowFilter.regexFilter(row.get(3)));
-        filters.add(RowFilter.regexFilter(row.get(4)));
+        filters.add(RowFilter.regexFilter(row.get(PATH)));
+        filters.add(RowFilter.regexFilter(row.get(AUTOR)));
+        filters.add(RowFilter.regexFilter(row.get(LOCATION)));
+        filters.add(RowFilter.regexFilter(row.get(DATE)));
+        filters.add(RowFilter.regexFilter(row.get(TAGS)));
         RowFilter<Object, Object> fooBarFilter = RowFilter.andFilter(filters);
         sorter.setRowFilter(fooBarFilter);
 
